@@ -59,9 +59,20 @@ class Intcode(object):
     OP_EQ       =  8
     OP_HALT     = 99
 
-    def __init__(self, data):
+    def __init__(self, data, inputs=[]):
         self.pc = 0
         self.memory = data.copy()
+        self.inputs = inputs.copy()
+        self.outputs = []
+
+    def from_file(filename, inputs=[]):
+        # Class method to generate a new Intcode computer from
+        # a program in "filename"
+        data = []
+        with open(filename, "r") as f:
+            for line in f:
+                data.extend([int(x) for x in line.split(",")])
+        return Intcode(data, inputs)
 
     def poke(self, addr, num):
         self.memory[addr] = num
@@ -70,7 +81,14 @@ class Intcode(object):
         if mode == ParameterMode.POSITION:
             addr = self.memory[addr]
         return self.memory[addr]
-    
+
+    def read_input(self):
+        if self.inputs:
+            result = self.inputs.pop(0)
+        else:
+            result = int(input("intcode> "))
+        return result
+
     def step(self):
         opcode = self.memory[self.pc]
         inst = Instruction(opcode)
@@ -92,11 +110,11 @@ class Intcode(object):
             self.poke(param3, result)
         elif inst.opcode == Intcode.OP_INPUT:
             param1 = self.peek(param_start)
-            result = int(input("intcode> "))
+            result = self.read_input()
             self.poke(param1, result)
         elif inst.opcode == Intcode.OP_OUTPUT:
             param1 = self.peek(param_start, mode=inst.param_mode[0])
-            print(param1)
+            self.outputs.append(param1)
         elif inst.opcode == Intcode.OP_JMPIF:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
