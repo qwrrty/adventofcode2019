@@ -90,6 +90,8 @@ class Intcode(object):
         return result
 
     def step(self):
+        # Step through executing one instruction in the Intcode program.
+        # Returns the opcode just executed.
         opcode = self.memory[self.pc]
         inst = Instruction(opcode)
 
@@ -136,13 +138,20 @@ class Intcode(object):
             param3 = self.peek(param_start+2)
             self.poke(param3, 1 if param1 == param2 else 0)
         elif inst.opcode == Intcode.OP_HALT:
-            return False
+            pass
         else:
             raise Exception("unknown opcode {}".format(inst.opcode))
 
         self.pc = new_pc
-        return True
+        return inst.opcode
 
-    def run(self):
-        while self.step():
-            pass
+    def run(self, break_on_output=False):
+        # Run an Intcode program.
+        # If break_on_output is True, return an output as soon as
+        # one is produced.
+        # If the program halts, return None.
+        while self.step() != Intcode.OP_HALT:
+            if break_on_output and self.outputs:
+                return self.outputs.pop(0)
+        return None
+
