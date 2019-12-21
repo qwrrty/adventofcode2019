@@ -4,11 +4,15 @@
 
 
 Opcode = {
-    1:   {"name": "ADD",    "param_count": 3},
-    2:   {"name": "MUL",    "param_count": 3},
-    3:   {"name": "INPUT",  "param_count": 1},
-    4:   {"name": "OUTPUT", "param_count": 1},
-    99:  {"name": "HALT",   "param_count": 1},
+     1: {"name": "ADD",      "param_count": 3},
+     2: {"name": "MUL",      "param_count": 3},
+     3: {"name": "INPUT",    "param_count": 1},
+     4: {"name": "OUTPUT",   "param_count": 1},
+     5: {"name": "JMPIF",    "param_count": 2},
+     6: {"name": "JMPIFNOT", "param_count": 2},
+     7: {"name": "LT",       "param_count": 3},
+     8: {"name": "EQ",       "param_count": 3},
+    99: {"name": "HALT",     "param_count": 1},
 }
 
 
@@ -45,11 +49,15 @@ class Instruction(object):
 
 class Intcode(object):
 
-    OP_ADD    =  1
-    OP_MUL    =  2
-    OP_INPUT  =  3
-    OP_OUTPUT =  4
-    OP_HALT   = 99
+    OP_ADD      =  1
+    OP_MUL      =  2
+    OP_INPUT    =  3
+    OP_OUTPUT   =  4
+    OP_JMPIF    =  5
+    OP_JMPIFNOT =  6
+    OP_LT       =  7
+    OP_EQ       =  8
+    OP_HALT     = 99
 
     def __init__(self, data):
         self.pc = 0
@@ -68,6 +76,7 @@ class Intcode(object):
         inst = Instruction(opcode)
 
         param_start = self.pc + 1
+        new_pc = self.pc + 1 + inst.param_count
         
         if inst.opcode == Intcode.OP_ADD:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
@@ -88,12 +97,32 @@ class Intcode(object):
         elif inst.opcode == Intcode.OP_OUTPUT:
             param1 = self.peek(param_start, mode=inst.param_mode[0])
             print(param1)
+        elif inst.opcode == Intcode.OP_JMPIF:
+            param1 = self.peek(param_start,   mode=inst.param_mode[0])
+            param2 = self.peek(param_start+1, mode=inst.param_mode[1])
+            if param1:
+                new_pc = param2
+        elif inst.opcode == Intcode.OP_JMPIFNOT:
+            param1 = self.peek(param_start,   mode=inst.param_mode[0])
+            param2 = self.peek(param_start+1, mode=inst.param_mode[1])
+            if not param1:
+                new_pc = param2
+        elif inst.opcode == Intcode.OP_LT:
+            param1 = self.peek(param_start,   mode=inst.param_mode[0])
+            param2 = self.peek(param_start+1, mode=inst.param_mode[1])
+            param3 = self.peek(param_start+2)
+            self.poke(param3, 1 if param1 < param2 else 0)
+        elif inst.opcode == Intcode.OP_EQ:
+            param1 = self.peek(param_start,   mode=inst.param_mode[0])
+            param2 = self.peek(param_start+1, mode=inst.param_mode[1])
+            param3 = self.peek(param_start+2)
+            self.poke(param3, 1 if param1 == param2 else 0)
         elif inst.opcode == Intcode.OP_HALT:
             return False
         else:
             raise Exception("unknown opcode {}".format(inst.opcode))
 
-        self.pc += inst.param_count + 1
+        self.pc = new_pc
         return True
 
     def run(self):
