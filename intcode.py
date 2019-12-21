@@ -89,6 +89,9 @@ class Intcode(object):
             result = int(input("intcode> "))
         return result
 
+    def add_input(self, input_val):
+        self.inputs.append(input_val)
+
     def step(self):
         # Step through executing one instruction in the Intcode program.
         # Returns the opcode just executed.
