@@ -6,7 +6,7 @@
 Opcode = {
     1:   {"name": "ADD",    "param_count": 3},
     2:   {"name": "MUL",    "param_count": 3},
-    3:   {"oame": "INPUT",  "param_count": 1},
+    3:   {"name": "INPUT",  "param_count": 1},
     4:   {"name": "OUTPUT", "param_count": 1},
     99:  {"name": "HALT",   "param_count": 1},
 }
@@ -81,6 +81,13 @@ class Intcode(object):
             param3 = self.peek(param_start+2)
             result = param1 * param2
             self.poke(param3, result)
+        elif inst.opcode == Intcode.OP_INPUT:
+            param1 = self.peek(param_start)
+            result = int(input("intcode> "))
+            self.poke(param1, result)
+        elif inst.opcode == Intcode.OP_OUTPUT:
+            param1 = self.peek(param_start, mode=inst.param_mode[0])
+            print(param1)
         elif inst.opcode == Intcode.OP_HALT:
             return False
         else:
