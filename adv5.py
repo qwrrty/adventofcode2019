@@ -6,7 +6,7 @@ from intcode import Intcode
 def part1(data):
     intcode = Intcode(data)
     intcode.run()
-
+    print(intcode.outputs)
     
 def read_input(filename):
     data = []
