@@ -92,7 +92,7 @@ class Intcode(object):
         if mode == ParameterMode.POSITION:
             addr = self.memory[addr]
         elif mode == ParameterMode.RELATIVE:
-            addr = self.memory[self.relative_base + addr]
+            addr = self.relative_base + self.memory[addr]
         return self.memory[addr]
 
     def read_input(self):
