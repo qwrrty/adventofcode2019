@@ -2,6 +2,7 @@
 
 # Implementation of the Intcode computer as specified in Day 5
 
+from collections import defaultdict
 
 Opcode = {
      1: {"name": "ADD",      "param_count": 3},
@@ -12,6 +13,7 @@ Opcode = {
      6: {"name": "JMPIFNOT", "param_count": 2},
      7: {"name": "LT",       "param_count": 3},
      8: {"name": "EQ",       "param_count": 3},
+     9: {"name": "REL",      "param_count": 1},
     99: {"name": "HALT",     "param_count": 1},
 }
 
@@ -19,6 +21,7 @@ Opcode = {
 class ParameterMode(object):
     POSITION = 0
     IMMEDIATE = 1
+    RELATIVE = 2
 
 
 class Instruction(object):
@@ -57,13 +60,18 @@ class Intcode(object):
     OP_JMPIFNOT =  6
     OP_LT       =  7
     OP_EQ       =  8
+    OP_REL      =  9
     OP_HALT     = 99
 
     def __init__(self, data, inputs=[]):
         self.pc = 0
-        self.memory = data.copy()
+        self.memory = defaultdict(int)
         self.inputs = inputs.copy()
         self.outputs = []
+        self.relative_base = 0
+
+        for i in range(0, len(data)):
+            self.memory[i] = data[i]
 
     def from_file(filename, inputs=[]):
         # Class method to generate a new Intcode computer from
@@ -74,12 +82,17 @@ class Intcode(object):
                 data.extend([int(x) for x in line.split(",")])
         return Intcode(data, inputs)
 
-    def poke(self, addr, num):
-        self.memory[addr] = num
+    def poke(self, addr, num, mode=ParameterMode.POSITION):
+        if mode == ParameterMode.RELATIVE:
+            self.memory[self.relative_base + addr] = num
+        else:
+            self.memory[addr] = num
     
     def peek(self, addr, mode=ParameterMode.IMMEDIATE):
         if mode == ParameterMode.POSITION:
             addr = self.memory[addr]
+        elif mode == ParameterMode.RELATIVE:
+            addr = self.memory[self.relative_base + addr]
         return self.memory[addr]
 
     def read_input(self):
@@ -140,6 +153,9 @@ class Intcode(object):
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
             param3 = self.peek(param_start+2)
             self.poke(param3, 1 if param1 == param2 else 0)
+        elif inst.opcode == Intcode.OP_REL:
+            param1 = self.peek(param_start,   mode=inst.param_mode[0])
+            self.relative_base += param1
         elif inst.opcode == Intcode.OP_HALT:
             pass
         else:
