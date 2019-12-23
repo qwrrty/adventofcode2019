@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# Implementation of the Intcode computer as specified in Day 5
+# Implementation of the Intcode computer in Advent of Code 2019
 
 from collections import defaultdict
 
@@ -119,19 +119,19 @@ class Intcode(object):
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
             param3 = self.peek(param_start+2)
             result = param1 + param2
-            self.poke(param3, result)
+            self.poke(param3, result,         mode=inst.param_mode[2])
         elif inst.opcode == Intcode.OP_MUL:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
             param3 = self.peek(param_start+2)
             result = param1 * param2
-            self.poke(param3, result)
+            self.poke(param3, result,         mode=inst.param_mode[2])
         elif inst.opcode == Intcode.OP_INPUT:
             param1 = self.peek(param_start)
             result = self.read_input()
-            self.poke(param1, result)
+            self.poke(param1, result,         mode=inst.param_mode[0])
         elif inst.opcode == Intcode.OP_OUTPUT:
-            param1 = self.peek(param_start, mode=inst.param_mode[0])
+            param1 = self.peek(param_start,   mode=inst.param_mode[0])
             self.outputs.append(param1)
         elif inst.opcode == Intcode.OP_JMPIF:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
@@ -147,12 +147,12 @@ class Intcode(object):
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
             param3 = self.peek(param_start+2)
-            self.poke(param3, 1 if param1 < param2 else 0)
+            self.poke(param3, 1 if param1 < param2 else 0, mode=inst.param_mode[2])
         elif inst.opcode == Intcode.OP_EQ:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
             param3 = self.peek(param_start+2)
-            self.poke(param3, 1 if param1 == param2 else 0)
+            self.poke(param3, 1 if param1 == param2 else 0, mode=inst.param_mode[2])
         elif inst.opcode == Intcode.OP_REL:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             self.relative_base += param1
