@@ -2,6 +2,7 @@
 
 import math
 
+from collections import defaultdict
 
 class Point(object):
     def __init__(self, x, y):
@@ -24,8 +25,17 @@ class AsteroidMap(object):
         rows = data.split()
         for y in range(0, len(rows)):
             for x in range(0, len(rows[y])):
-                if rows[y][x] == "#":
+                if rows[y][x] != ".":
                     self.grid[Point(x,y)] = True
+        self.height = len(rows)
+        self.width = len(rows[0])
+
+    def render(self):
+        rows = []
+        for y in range(0, self.height):
+            row = ["#" if Point(x,y) in self.grid else "." for x in range(0, self.width)]
+            rows.append("".join(row))
+        return "\n".join(rows)
 
     def from_file(filename):
         with open(filename, "r") as f:
@@ -48,9 +58,12 @@ class AsteroidMap(object):
         # two points. We then can find all of the integral coordinates that
         # lie on the line segment by starting at (x1,y1) and repeatedly adding
         # the minimal x and y deltas.
-        
+
         ydelta = p2.y - p1.y
         xdelta = p2.x - p1.x
+
+        if xdelta == 0 and ydelta == 0:
+            return []
 
         gcd = math.gcd(xdelta, ydelta)
         ydelta //= gcd
@@ -89,8 +102,69 @@ class AsteroidMap(object):
             counts[p] = self.count_visible_asteroids(p)
         station = max(counts, key=counts.get)
         return station, counts[station]
+
+    def vaporize_asteroids(self, station, limit=200):
+        # With a laser cannon mounted at the Point defined by station,
+        # sweep around the map vaporizing asteroids. Stop when vaporized
+        # asteroids exceed the given limit, or when all asteroids (except
+        # station) have been vaporized. Return the list of vaporized asteroids
+        # in order of destruction.
+        #
+        # To determine the order in which to vaporize asteroids:
+        #
+        # 1. Measure the angle from the Y-axis to each asteroid.
+        # 2. Build a mapping from angles to a list of asteroids found along
+        #    that angle.
+        # 3. Sort each sub-list of asteroids by distance from station.
+        # 4. Iterate through the mapping in numerical order by angle, popping
+        #    one asteroid off each list as we go.
+        #
+        # Notes:
+        #
+        # Calculating the angle between the target asteroid and the y-axis
+        # is easier if we calculate it as atan(x_delta, y_delta) rather than
+        # atan(y_delta, x_delta). Doing so makes the vertical Y axis start at -pi
+        # radians and increase as we sweep clockwise through the field, which is
+        # what we want for sorting purposes.
+
+        def distance(p):
+            return math.sqrt((p.x-station.x)**2 + (p.y-station.y)**2)
         
+        # Map angles to asteroids.
+        angles = defaultdict(list)
+        for p in self.grid:
+            if p == station:
+                continue
+            rad = math.atan2(p.x-station.x, p.y-station.y)
+            angles[rad].append(p)
+
+        # Sort each bucket by distance from the station
+        for rad in angles:
+            angles[rad].sort(key=distance)
+
+        # Now walk through the map in order of angle and pop off asteroids one by one
+        vaporized = []
+        while angles and len(vaporized) < limit:
+            for rad in sorted(angles.keys(), reverse=True):
+                vaporized.append(angles[rad].pop(0))
+                if len(vaporized) >= limit:
+                    break
+            # Remove any empty lists
+            empty = [rad for rad in angles if not angles[rad]]
+            for rad in empty:
+                del angles[rad]
+
+        return vaporized
+
+
 def part1():
     m = AsteroidMap.from_file("adv10_input.txt")
     station, count = m.find_best_station()
     print(station, count)
+
+def part2():
+    m = AsteroidMap.from_file("adv10_input.txt")
+    station, count = m.find_best_station()
+    vaporized = m.vaporize_asteroids(station, limit=200)
+    a = vaporized[-1]
+    print(a.x * 100 + a.y)
