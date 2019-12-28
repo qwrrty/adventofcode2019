@@ -164,13 +164,15 @@ class Intcode(object):
         self.pc = new_pc
         return inst.opcode
 
-    def run(self, break_on_output=False):
+    def run(self, break_on_output=0):
         # Run an Intcode program.
-        # If break_on_output is True, return an output as soon as
-        # one is produced.
+        # If break_on_output is nonzero, return outputs as soon as
+        # this many outputs has been received.
         # If the program halts, return None.
+        outputs = []
         while self.step() != Intcode.OP_HALT:
             if break_on_output and self.outputs:
-                return self.outputs.pop(0)
+                outputs.append(self.outputs.pop(0))
+                if len(outputs) >= break_on_output:
+                    return outputs
         return None
-
