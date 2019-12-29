@@ -63,12 +63,18 @@ class Intcode(object):
     OP_REL      =  9
     OP_HALT     = 99
 
+    # Machine states
+    RUNNING     = "RUNNING"   # Machine is running or able to start
+    BLOCKED     = "BLOCKED"   # Machine is blocked and waiting on input
+    HALTED      = "HALTED"    # Machine has halted
+
     def __init__(self, data, inputs=[]):
         self.pc = 0
         self.memory = defaultdict(int)
         self.inputs = inputs.copy()
         self.outputs = []
         self.relative_base = 0
+        self.state = Intcode.RUNNING
 
         for i in range(0, len(data)):
             self.memory[i] = data[i]
@@ -82,12 +88,21 @@ class Intcode(object):
                 data.extend([int(x) for x in line.split(",")])
         return Intcode(data, inputs)
 
+    def is_running(self):
+        return self.state == Intcode.RUNNING
+
+    def is_blocked(self):
+        return self.state == Intcode.BLOCKED
+
+    def is_halted(self):
+        return self.state == Intcode.HALTED
+
     def poke(self, addr, num, mode=ParameterMode.POSITION):
         if mode == ParameterMode.RELATIVE:
             self.memory[self.relative_base + addr] = num
         else:
             self.memory[addr] = num
-    
+
     def peek(self, addr, mode=ParameterMode.IMMEDIATE):
         if mode == ParameterMode.POSITION:
             addr = self.memory[addr]
@@ -95,25 +110,28 @@ class Intcode(object):
             addr = self.relative_base + self.memory[addr]
         return self.memory[addr]
 
-    def read_input(self):
-        if self.inputs:
-            result = self.inputs.pop(0)
-        else:
-            result = int(input("intcode> "))
-        return result
-
     def add_input(self, input_val):
         self.inputs.append(input_val)
 
     def step(self):
         # Step through executing one instruction in the Intcode program.
         # Returns the opcode just executed.
+
+        # First check whether we are blocked on executing for any reason
+        if self.is_halted():
+            return Intcode.OP_HALT
+        if self.is_blocked() and not self.inputs:
+            return Intcode.OP_INPUT
+        else:
+            # input is available, we're back in business
+            self.state = Intcode.RUNNING
+
         opcode = self.memory[self.pc]
         inst = Instruction(opcode)
 
         param_start = self.pc + 1
         new_pc = self.pc + 1 + inst.param_count
-        
+
         if inst.opcode == Intcode.OP_ADD:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             param2 = self.peek(param_start+1, mode=inst.param_mode[1])
@@ -127,8 +145,13 @@ class Intcode(object):
             result = param1 * param2
             self.poke(param3, result,         mode=inst.param_mode[2])
         elif inst.opcode == Intcode.OP_INPUT:
+            # If no input is available, set the machine state to BLOCKED
+            # and return immediately (do not advance the PC counter)
+            if not self.inputs:
+                self.state = Intcode.BLOCKED
+                return None
+            result = self.inputs.pop(0)
             param1 = self.peek(param_start)
-            result = self.read_input()
             self.poke(param1, result,         mode=inst.param_mode[0])
         elif inst.opcode == Intcode.OP_OUTPUT:
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
@@ -157,7 +180,7 @@ class Intcode(object):
             param1 = self.peek(param_start,   mode=inst.param_mode[0])
             self.relative_base += param1
         elif inst.opcode == Intcode.OP_HALT:
-            pass
+            self.state = Intcode.HALTED
         else:
             raise Exception("unknown opcode {}".format(inst.opcode))
 
@@ -169,10 +192,13 @@ class Intcode(object):
         # If break_on_output is nonzero, return outputs as soon as
         # this many outputs has been received.
         # If the program halts, return None.
-        outputs = []
-        while self.step() != Intcode.OP_HALT:
-            if break_on_output and self.outputs:
-                outputs.append(self.outputs.pop(0))
-                if len(outputs) >= break_on_output:
-                    return outputs
+        while True:
+            self.step()
+            if break_on_output and len(self.outputs) >= break_on_output:
+                result = self.outputs[0:break_on_output]
+                self.outputs = self.outputs[break_on_output:]
+                return result
+            if not self.is_running():
+                # Machine is blocked or halted
+                break
         return None
