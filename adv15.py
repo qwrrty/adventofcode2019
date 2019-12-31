@@ -66,6 +66,41 @@ class RepairDroid(object):
         self.intcode.add_input(return_direction)
         self.intcode.run(break_on_output=1)
 
+    def bfs(self, start, target="O"):
+        # Perform a breadth-first search of the map, beginning at start,
+        # seeking for a cell marked with the target char. If target is None
+        # then walk the entire map, returning the maximum number of steps.
+        steps = 0
+        current_points = [start]
+        visited = set()
+
+        while current_points:
+            next_steps = []
+            for p in current_points:
+                if target and self.ship_map[p] == target:
+                    print(steps)
+                    return
+                if p in visited:
+                    continue
+                visited.add(p)
+                # Identify the neighbor cells of this point
+                neighbors = [Direction.move(p, d) for d in
+                             [Direction.NORTH,
+                              Direction.SOUTH,
+                              Direction.WEST,
+                              Direction.EAST]]
+                # Limit to neighbors that can be traveled and have not been visited
+                valid_neighbors = [p for p in neighbors
+                                   if self.ship_map[p] != "#" and p not in visited]
+                next_steps.extend(valid_neighbors)
+            steps += 1
+            current_points = next_steps
+            
+        # If we got here, we traversed the entire map without finding the target.
+        # Return the number of steps walked (which was actually the previous step,
+        # the last one in which there were cells to fill)
+        return steps-1
+
     def render_map(self):
         if not self.ship_map:
             return
@@ -90,32 +125,18 @@ def part1():
 
     # Perform a breadth-first search of the map to find the shortest
     # path to the oxygen system.
-    steps = 0
-    current_points = [(0,0)]
-    visited = set()
+    print(droid.bfs(start=(0,0)))
 
-    while True:
-        next_steps = []
-        for p in current_points:
-            if droid.ship_map[p] == "O":
-                print(steps)
-                return
-            if p in visited:
-                continue
-            visited.add(p)
-            # Identify the neighbor cells of this point
-            neighbors = [Direction.move(p, d) for d in
-                         [Direction.NORTH,
-                          Direction.SOUTH,
-                          Direction.WEST,
-                          Direction.EAST]]
-            # Limit to neighbors that can be traveled and have not been visited
-            valid_neighbors = [p for p in neighbors
-                               if droid.ship_map[p] != "#" and p not in visited]
-            next_steps.extend(valid_neighbors)
-        steps += 1
-        current_points = next_steps
+def part2():
+    droid = RepairDroid.from_file()
+    droid.ship_map[(0,0)] = "X"
+    droid.step()
 
+    # Perform a breadth-first search of the map, starting from the
+    # oxygen system, to find out how long it will take the map to
+    # fill with oxygen.
+    oxygen_system = [p for p, val in droid.ship_map.items() if val == "O"][0]
+    print(droid.bfs(start=oxygen_system, target=None))
 
 if __name__ == "__main__":
-    part1()
+    part2()
