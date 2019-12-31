@@ -44,7 +44,9 @@ class ReactionChart(object):
         return chem, int(amt)
     
 
-def calculate_requirements(chart, target_chemical="FUEL", target_quantity=1):
+def calculate_requirements(chart,
+                           target_chemical="FUEL",
+                           target_quantity=1):
     orders = []
     orders.append((target_chemical, target_quantity))
 
@@ -90,3 +92,7 @@ def calculate_requirements(chart, target_chemical="FUEL", target_quantity=1):
 def part1():
     chart = ReactionChart.from_file()
     print(calculate_requirements(chart))
+
+def part2():
+    chart = ReactionChart.from_file()
+    print(calculate_requirements(chart, target_quantity=2521844))
